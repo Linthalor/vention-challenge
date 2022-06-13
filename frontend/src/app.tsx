@@ -3,7 +3,7 @@ import './app.scss';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSocket, useSocketEvent } from 'socket.io-react-hook';
 import { PositionMessage } from '../../common/messages/possition-message';
-import { acos, cross, distance, dot, number, /*add, rotate*/ } from 'mathjs';
+import { acos, distance, dot, number } from 'mathjs';
 import { getRadius } from '../../common/util';
 import { PendulumConfig } from '../../common/pendulum-config';
 import { Box, Button, Checkbox, FormControlLabel, Slider, Stack, Toolbar, Tooltip, Typography } from '@mui/material';
@@ -28,14 +28,6 @@ const spacing = 5;
 const simulationPollSpeedMs = 200;
 
 // TODO: have this get randomly generated?
-// const startConfig = {
-//   theta: 15 * (Math.PI/180),
-//   length: 1,
-//   mass: 1,
-//   damping: 0.2,
-//   maxWind: -3,
-//   windFreq: 1/10,
-// }
 const initialConfig = [{
   theta: 45 * (Math.PI/180),
   length: 4,
@@ -78,39 +70,6 @@ const initialConfig = [{
   stopAndRestartOnCollision: false,
 }];
 
-// const drawLine = (
-//   line: { x: number, y: number, x1: number, y1: number},
-//   ctx: CanvasRenderingContext2D,
-//   style: { color?: string, width?: number } = {},
-// ) => {
-//   const { x, y, x1, y1 } = line;
-//   const { color = 'black', width = 1 } = style;
-
-//   ctx.beginPath();
-//   ctx.moveTo(x, y);
-//   ctx.lineTo(x1, y1);
-//   ctx.strokeStyle = color;
-//   ctx.lineWidth = width;
-//   ctx.stroke();
-// }
-
-// const drawCircle = (
-//   pos: { x: number, y: number },
-//   radius: number,
-//   ctx: CanvasRenderingContext2D,
-//   style: { color?: string, fillColor?: string, width?: number } = {},
-// ) => {
-//   const { color = 'black', fillColor = 'black', width = 1 } = style;
-
-//   ctx.beginPath();
-//   ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
-//   ctx.fillStyle = fillColor;
-//   ctx.fill();
-//   ctx.lineWidth = width;
-//   ctx.strokeStyle = color;
-//   ctx.stroke();
-// }
-
 const ValueLabelComponent = (props: {
   children: React.ReactElement;
   value: number;
@@ -125,23 +84,11 @@ const ValueLabelComponent = (props: {
 }
 
 const App = () => {
-  // const canvas = useRef<HTMLCanvasElement>(null);
-  // const ctx = useMemo(() => {
-  //   const canvasEle = canvas.current;
-  //   if (canvasEle) {
-  //     canvasEle.width = canvasEle.clientWidth;
-  //     canvasEle.height = canvasEle.clientHeight;
-  
-  //     // get context of the canvas
-  //     return canvasEle.getContext("2d");
-  //   }
-  // }, [canvas.current]);
   const { t } = useTranslation();
 
-  // TODO: have it randomly generate 5 configs each page load?
   const [configs, setConfigs] = useState<PendulumConfig[]>(initialConfig);
 
-  const { handleSubmit, register, formState, control, watch, getValues } = useForm({
+  const { register, control, watch, getValues } = useForm({
     resolver: zodResolver(PendulumConfigFormSchema),
     mode: 'onBlur',
     defaultValues: {
@@ -184,7 +131,7 @@ const App = () => {
     pendulums.forEach(port => fetch(`${apiUrl(port)}stop`));
   };
 
-  const center = useMemo(() => Math.floor(pendulums.length / 2), [pendulums]);
+  const center = useMemo(() => Math.floor(pendulums.length / 2), []);
 
   const svg = useRef<SVGSVGElement>(null);
   // pendulums won't change so it is safe to use hooks inside the map.
@@ -195,9 +142,9 @@ const App = () => {
   const messages = pendulums.map(pendulum => {
     const url = apiUrl(pendulum);
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { socket, error } = useSocket(url);
+    const { socket } = useSocket(url);
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { lastMessage: position, sendMessage } = useSocketEvent<PositionMessage | undefined>(socket, MessageTypes.Position);
+    const { lastMessage: position } = useSocketEvent<PositionMessage | undefined>(socket, MessageTypes.Position);
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const { lastMessage: messageRate } = useSocketEvent<PositionRateMessage | undefined>(socket, MessageTypes.PositionRate);
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -221,45 +168,6 @@ const App = () => {
     }
     return prev;
   }, SimulationState.Stopped);
-  
-  // useEffect(() => {
-  //   messages.forEach(({ url, lastMessage }) => {
-  //     if (lastMessage) {
-  //       console.log(
-  //         url, ' --- ',
-  //         'angle', lastMessage.theta * (180/Math.PI),
-  //         ' --- length ', lastMessage.length,
-  //         ' --- wind ', lastMessage.wind
-  //       );        
-  //     }
-  //   })
-  // }, messageWatcher);
-
-  // useEffect(() => {
-  //   if (ctx && canvas.current) {
-  //     ctx.clearRect(0, 0, canvas.current.width, canvas.current.height);
-  //     ctx.translate(canvas.current.width/2,canvas.current.height/2);
-  //     ctx.scale(10, 10);
-  //     drawLine({ x: -canvas.current.width/2, y: 0, x1: canvas.current.width/2, y1: 0 }, ctx, { color: 'green', width: 0.5 });
-  //     drawLine({ x: 0, y: -canvas.current.height/2, x1: 0, y1: canvas.current.height/2 }, ctx, { color: 'green', width: 0.5 });
-
-  //     messages.forEach(({ lastMessage }, idx) => {
-  //       if (lastMessage) {
-  //         const positionOffset = idx * spacing;
-  //         const x = positionOffset;
-  //         const y = 0;
-  //         const [x1, y1] = add(rotate([0, lastMessage.length], lastMessage.theta), [x, 0]);
-
-  //         drawLine({ x, y, x1, y1 }, ctx, { color: idx === 1 ? 'red' : 'blac k', width: 1/10 });
-  //         const volume = lastMessage.mass; // Assuming a density of 1 for (V = m/p)
-  //         const radius = getRadius(volume);
-  //         drawCircle({ x: x1, y: y1 }, radius, ctx, { width: 1/10 });
-  //       }
-  //     });
-  //     ctx.scale(1/10, 1/10);
-  //     ctx.translate(-canvas.current.width/2, -canvas.current.height/2);
-  //   }
-  // }, messageWatcher);
 
   const {
     viewSize,
@@ -296,7 +204,6 @@ const App = () => {
   );
 
   const [dragging, setDragging] = useState(false);
-// TODO: use the useCallback hook for all my callbacks?
   const startPendulumDrag = useCallback((
     event: React.MouseEvent<SVGCircleElement>,
     idx: number,
@@ -307,8 +214,6 @@ const App = () => {
     event.preventDefault();
 
     setDragging(true);
-
-    // TODO: get pendulum rotation point and then 
     
     const point = svg.current.createSVGPoint();
     const mousemove = (event: MouseEvent) => {
@@ -375,7 +280,6 @@ const App = () => {
         className="action-toolbar"
       >
         <>
-          {/* {simulationState === SimulationState.Stopped && <Box className="actions" sx={{ gap: 1 }}> */}
           <Button color="inherit" onClick={() => start()}>
             {simulationState === SimulationState.Stopped ? t('common:start') : t('common:restart')}
           </Button>
@@ -400,7 +304,7 @@ const App = () => {
                 fontSize: 10,
                 bottom: 16,
               }}>
-{/* TODO: use the i18n library to do this. */}
+              {/* TODO: use the i18n library to do this. */}
               {(Math.round(averageWindSpeed * -100) / 100).toFixed(2)}Nm
             </Typography>}
           </Box>
@@ -418,7 +322,6 @@ const App = () => {
                   <Controller
                     name="windMagnitude"
                     control={control}
-                    // defaultValue={10 /*getValues().windMagnitude*/}
                     render={({ formState, fieldState, ...props }) => (
                       <Slider
                         {...props}
@@ -428,7 +331,6 @@ const App = () => {
                         }}
                         color="secondary"
                         size="small"
-                        // placement="bottom"
                         valueLabelDisplay="auto"
                         aria-label={t('pendulum:wind:magnitude')}
                         min={winSettings.frequency.min}
@@ -449,7 +351,6 @@ const App = () => {
                   <Controller
                     name="windFrequency"
                     control={control}
-                    // defaultValue={getValues().windFrequency}
                     render={({ formState, fieldState, ...props }) => (
                       <Slider
                         {...props}
@@ -459,7 +360,6 @@ const App = () => {
                         }}
                         color="secondary"
                         size="small"
-                        // placement="bottom"
                         valueLabelDisplay="auto"
                         aria-label={t('pendulum:wind:frequency')}
                         min={winSettings.frequency.min}
@@ -508,10 +408,6 @@ const App = () => {
           </Box>
         </>
       </Toolbar>
-      {/* <canvas
-        ref={canvas}
-        style={{ width: '100%', flex: 1, }}
-      /> */}
       <Box sx={{ flex: 1, mr: 1, position: 'relative', overflow: 'hidden' }}>
         <svg
           ref={svg}
@@ -564,7 +460,6 @@ const App = () => {
 
             <g transform={`translate(${halfViewSize} ${pendulumPivotLineOffsetY})`}>
               {pendulums.map((p, idx) => {
-                // TODO: check if we are running (started/paused) (if so read last message, if not read config).
                 const position = simulationState !== SimulationState.Stopped
                   ? messages[idx].position
                   : configs[idx];
