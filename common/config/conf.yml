@@ -1,0 +1,12 @@
+ports:
+  - 3001
+  - 3002
+  - 3003
+  - 3004
+  - 3005
+distanceBetween: 5.0
+simulationPollSpeedMs: 200
+# If the simulation frequency cannot be maintained by the app, then time dialation will occure so the simulation time step is preserved.
+simulationFreqMs: 20
+gravity: 9.81
+collideTimeoutMs: 5000
